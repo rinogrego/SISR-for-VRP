@@ -24,8 +24,8 @@ def parse_vrp_question(file_path):
 vehicle_capcity, data = parse_vrp_question("data/sample_50.txt")
 vehicle_capcity, data = parse_vrp_question("data/sample_10.txt")
 vehicle_capcity, data = parse_vrp_question("data/sample_100.txt")
-vehicle_capcity, data = parse_vrp_question("data/sample_20.txt")
 vehicle_capcity, data = parse_vrp_question("data/sample.txt")
+vehicle_capcity, data = parse_vrp_question("data/sample_20.txt")
 # Columns: XCOORD. | YCOORD. | DEMAND | READY TIME | DUE DATE | SERVICE TIME
 data = data[:, :3]
 # Columns: XCOORD. | YCOORD. | DEMAND
@@ -36,8 +36,8 @@ print("------------------")
 
 start_time = time.time()
 np.random.seed(0)
-d, best_routes = sisr_cvrp(data, vehicle_capcity, n_iter=20_000, init_T=10.0, final_T=1.0,
-                           init_route = None, verbose_step=100)
+d, best_routes = sisr_cvrp(data, vehicle_capcity, n_iter=10_000, init_T=10.0, final_T=1.0,
+                           init_route = None, verbose_step=50)
 time_cost = time.time() - start_time
 print("time_cost", time_cost)
 print("distance", d)

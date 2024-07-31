@@ -41,8 +41,8 @@ def sisr_vrp(data,
     def get_routes_distance(distance_matrix, routes):
         total_distance = 0
         for route in routes:
-            r = [0]+route+[0]
-            total_distance += np.sum([distance_matrix[r[i],r[i+1]] for i in range(len(r)-1)])
+            r = [0] + route + [0]
+            total_distance += np.sum([distance_matrix[r[i], r[i+1]] for i in range(len(r)-1)])
         return total_distance
     
     def get_neighbours(distance_matrix):
@@ -72,12 +72,12 @@ def sisr_vrp(data,
                 start = np.random.randint(range1, range2)
                 potential_removal = tr[start:start+l_t_m]
                 return [potential_removal[i] for i in np.random.choice(l_t_m, l_t, replace=False)]
-            if np.random.random()<0.5:
+            if np.random.random() < 0.5:
                 newly_removed = string_removal(tr, l_t, c)
             else:
                 newly_removed = split_removal(tr, l_t, c, m)
-                if m<(len(tr)-l_t) or np.random.random()>m_alpha:
-                    m+=1
+                if m < (len(tr)-l_t) or np.random.random() > m_alpha:
+                    m += 1
             return m, newly_removed
         
         def find_t(last_routes, c):
@@ -95,8 +95,8 @@ def sisr_vrp(data,
         
         m = 1
         l_s_max = min(L_max, np.mean([len(x) for x in last_routes]))
-        k_s_max = 4.0*c_bar/(1.0+l_s_max)-1.0
-        k_s = int(np.random.random()*k_s_max+1.0)
+        k_s_max = 4.0 * c_bar / (1.0 + l_s_max) - 1.0
+        k_s = int(np.random.random() * k_s_max + 1.0)
         c_seed = int(np.random.random()*len(data))
         if in_absents is None:
             absents = []
@@ -105,55 +105,78 @@ def sisr_vrp(data,
         ruined_t_indices = set([])
         for c in neighbours[c_seed]:
             if len(ruined_t_indices) >= k_s: break
-            if c not in absents and c!=0:
+            if c not in absents and c != 0:
                 t = find_t(last_routes, c)
                 if t in ruined_t_indices: continue
-                if isHugeRuin and np.random.random()>0.5:
+                if isHugeRuin and np.random.random() > 0.5:
                     newly_removed = last_routes[t]
                 else:
                     l_t_max = min(l_s_max, len(last_routes[t]))
                     l_t = int(np.random.random()*l_t_max+1.0)
                     m, newly_removed = remove_nodes(last_routes[t], l_t, c, m)
-                absents = absents+newly_removed
+                absents = absents + newly_removed
                 ruined_t_indices.add(t)
         current_routes = routes_summary(last_routes, absents)
         return current_routes, absents
     
     def recreate(data, distance_matrix, current_routes, absents, last_length=None):
-        
+        """
+            data have columns:
+            XCOORD.    YCOORD.    DEMAND   READY TIME  DUE DATE   SERVICE TIME
+        """
         def checkValid_legacy(complete_r):
+            """mengecek apakah suatu route adalah valid secara constraint: ready time, due date, dan service time
+            """
             t_current = 0
-            for j in range(0,len(complete_r)-1):
-                t_current+=distance_matrix[complete_r[j]][complete_r[j+1]]
-                t_current=max(data[complete_r[j+1]][3], t_current)
-                if t_current<=data[complete_r[j+1]][4]:
-                    t_current+=data[complete_r[j+1]][-1]
+            # check whether the chosen route, when followed properly, violate any time constrains along the way or not
+            for j in range(0, len(complete_r)-1):
+                t_current += distance_matrix[complete_r[j]][complete_r[j+1]]
+                # take which one is higher:
+                # ready time of the next node OR the current time
+                t_current = max(data[complete_r[j+1]][3], t_current)
+                # check whether the current_time progress exceed the due date of the next node
+                # a.k.a TOKO SUDAH TUTUP
+                if t_current <= data[complete_r[j+1]][4]:
+                    # next node is accepted. increase the current time (TOKO MASIH BUKA!!!)
+                    # current_time = current time + service time
+                    t_current += data[complete_r[j+1]][-1]
                 else:
+                    # next node is not valid because violated the due date.
+                    # just stop searching.
+                    # self-note: MAYYYBE kalo mau kasih penalty atau soft-time window masukin di sini
                     return False
             return True
         
-        def getValid_legacy(r,c):
+        def getValid_legacy(r, c):
+            """
+                Mendapatkan seluruh kemungkinan rute baru yang feasible yang dibentuk
+                dengan mencoba memasukkan node c ke dalam seluruh posisi di dalam rute r yang mungkin
+                ---
+                Returns:
+                    valids: list[set[int, float]]
+            """
             dist = get_route_distance(distance_matrix, r)
-            complete_r = [0]+r+[0]
+            complete_r = [0] + r + [0]
             valids = []
-            tmp_t=0
+            tmp_t = 0
             for i in range(len(complete_r)-1):
-                tmp_t=max(tmp_t, data[complete_r[i]][3])
-                tmp_t+=data[complete_r[i]][-1]
-                if tmp_t+distance_matrix[complete_r[i]][c]>data[c][4]: break
-                new_r = r[:i]+[c]+r[i:]
-                if checkValid_legacy([0]+new_r+[0]):
+                tmp_t = max(tmp_t, data[complete_r[i]][3])
+                tmp_t += data[complete_r[i]][-1]
+                if tmp_t + distance_matrix[complete_r[i]][c] > data[c][4]: 
+                    break
+                new_r = r[:i] + [c] + r[i:]
+                if checkValid_legacy([0] + new_r + [0]):
                     new_d = get_route_distance(distance_matrix, new_r)
-                    valids.append((i,new_d-dist))
-                tmp_t+=distance_matrix[complete_r[i]][complete_r[i+1]]
+                    valids.append((i, new_d - dist))
+                tmp_t += distance_matrix[complete_r[i]][complete_r[i+1]]
             return valids
         
         def route_add(current_routes, c, adding_position):
-            if adding_position[0]==-1:
-                current_routes = current_routes+[[c]]
+            if adding_position[0] == -1:
+                current_routes = current_routes + [[c]]
             else:
                 chg_r = current_routes[adding_position[0]]
-                new_r = chg_r[:adding_position[1]]+[c]+chg_r[adding_position[1]:]
+                new_r = chg_r[:adding_position[1]] + [c] + chg_r[adding_position[1]:]
                 current_routes[adding_position[0]] = new_r
             return current_routes
         
@@ -162,17 +185,20 @@ def sisr_vrp(data,
         if last_length is not None: rests = []
         for c in absents:
             probable_place = []
-            for ir,r in enumerate(current_routes):
+            for ir, r in enumerate(current_routes):
                 # assert capacity
-                if (np.sum([data[x][2] for x in r])+data[c][2])>vehicle_capcity: continue
-                valids = getValid_legacy(r,c)
+                if (np.sum([data[x][2] for x in r]) + data[c][2]) > vehicle_capcity: 
+                    continue
+                # finding valid routes by finding all feasible combination of r inserted with c
+                valids = getValid_legacy(r, c)
                 for v in valids:
-                    probable_place.append((ir,v[0],v[1]))
-            if len(probable_place)==0:
-                if last_length is not None and len(current_routes)>=last_length:
+                    # (index current_route, node_to_be_inserted, new_path_cost)
+                    probable_place.append((ir, v[0], v[1]))
+            if len(probable_place) == 0:
+                if last_length is not None and len(current_routes) >= last_length:
                     rests.append(c)
                     continue
-                adding_position = (-1,-1,1)
+                adding_position = (-1, -1, 1)
             else:
                 adding_position = sorted(probable_place, key=lambda x: x[-1])[0]
 #             probable_place.append((-1,-1,2*distance_matrix[0,c]))
@@ -188,9 +214,7 @@ def sisr_vrp(data,
         last_routes = copy.deepcopy(routes)
         for i in range(n):
             current_routes, new_absents = ruin(last_routes, neighbours, absents)
-            current_routes, new_absents = recreate(data, distance_matrix,
-                                                              current_routes, new_absents,
-                                                              last_length=len(last_routes))
+            current_routes, new_absents = recreate(data, distance_matrix, current_routes, new_absents, last_length=len(last_routes))
             if len(new_absents)==0:
                 best_routes = copy.deepcopy(current_routes)
                 sumabs = sorted([(t, np.sum(absent_c[t])) for t in best_routes], key=lambda x: x[1])
@@ -212,8 +236,8 @@ def sisr_vrp(data,
     if obj_n_routes is not None: assert fleet_gap is not None
     alpha_T = (final_T/init_T)**(1.0/n_iter)
     
-    coords = data[:,:2]
-    distance_matrix = np.zeros([len(coords),len(coords)])
+    coords = data[:, :2]
+    distance_matrix = np.zeros([len(coords), len(coords)])
     for i in range(len(coords)):
         coord = coords[i]
         distance_matrix[i] = np.sum((coord-coords)**2,axis=1)**0.5
@@ -221,7 +245,7 @@ def sisr_vrp(data,
     if init_route is not None:
         best_routes = copy.deepcopy(init_route)
     else:
-        best_routes = [[i] for i in range(1,len(data))]
+        best_routes = [[i] for i in range(1, len(data))]
     best_distance = get_routes_distance(distance_matrix, best_routes)
     last_routes = copy.deepcopy(best_routes)
     last_distance = get_routes_distance(distance_matrix, best_routes)
@@ -233,39 +257,44 @@ def sisr_vrp(data,
         last_routes = fleet_min(n_iter_fleet, data, distance_matrix, neighbours, best_routes, verbose_step)
         last_distance = get_routes_distance(distance_matrix, last_routes)
 
-        if last_distance<best_distance:
+        if last_distance < best_distance:
             best_distance = last_distance
             best_routes = last_routes
         print(len(best_routes), best_distance)
     temperature = init_T
-    
+    # the algorithm
     for i_iter in range(n_iter):
-        if obj_n_routes is not None and len(last_routes)>obj_n_routes and (i_iter+1)%fleet_gap==0:
-            current_routes = fleet_min(n_iter_fleet, data, distance_matrix, neighbours, last_routes, verbose_step)
+        if obj_n_routes is not None and len(last_routes) > obj_n_routes and (i_iter+1) % fleet_gap == 0:
+            # not called it seems
+            # current_routes = fleet_min(n_iter_fleet, data, distance_matrix, neighbours, last_routes, verbose_step)
+            pass
         else:
             current_routes, absents = ruin(last_routes, neighbours)
             current_routes = recreate(data, distance_matrix, current_routes, absents)
         
         current_distance = get_routes_distance(distance_matrix, current_routes)
-        if len(current_routes)<len(best_routes) or \
-           (current_distance<(last_distance-temperature*np.log(np.random.random())) and \
-            len(current_routes)<=len(best_routes)):
-            
-            if len(current_routes)<len(best_routes) or current_distance<best_distance:
+        if len(current_routes) < len(best_routes) or \
+           ( current_distance < (last_distance - temperature * np.log(np.random.random())) and \
+            len(current_routes) <= len(best_routes) ):
+            # Check whether num. of current routes < num of best routes OR current distance < best distance
+            # Basically update the best routes & distance IFF the total distance is shorter OR the number of routes is lesser
+            if len(current_routes) < len(best_routes) or current_distance < best_distance:
                 best_distance = current_distance
                 best_routes = current_routes
                 if test_obj is not None and best_distance<test_obj:
                     break
             last_distance = current_distance
             last_routes = current_routes
-        temperature*=alpha_T
+        # Equation (1)
+        temperature *= alpha_T # Basically temperature = previous_temperature X c
         
         if verbose_step is not None and (i_iter+1)%verbose_step==0:
             print(i_iter+1, np.round((i_iter+1)/n_iter*100,4), "%:",
                   len(best_routes), len(last_routes), len(current_routes),
                   best_distance, last_distance, current_distance)
     
-    if verbose_step is not None and n_iter%verbose_step!=0: print(i_iter+1, "100.0 %:", best_distance)
+    if verbose_step is not None and n_iter % verbose_step != 0: 
+        print(i_iter+1, "100.0 %:", best_distance)
     return best_distance, best_routes
 
 def sisr_cvrp(
@@ -367,7 +396,7 @@ def sisr_cvrp(
                 newly_removed = string_removal(tr, l_t, c)
             else:
                 newly_removed = split_removal(tr, l_t, c, m)
-                if m<(len(tr)-l_t) or np.random.random() > m_alpha:
+                if m < (len(tr)-l_t) or np.random.random() > m_alpha:
                     m += 1
             return m, newly_removed
         
@@ -396,7 +425,7 @@ def sisr_cvrp(
         m = 1   # initial customers to preserve
         l_s_max = min(L_max, np.mean([len(x) for x in last_routes]))    # Equation (5)
         k_s_max = 4.0 * c_bar / (1.0 + l_s_max) - 1.0                   # Equation (6)
-        k_s = int(np.random.random() * k_s_max+1.0)                     # Equation (7)
+        k_s = int(np.random.random() * k_s_max + 1.0)                     # Equation (7)
         c_seed = int(np.random.random()*len(data))  # take random index (node)
         if in_absents is None:
             absents = []
@@ -427,8 +456,8 @@ def sisr_cvrp(
         """
         
         def route_add(dist_m, current_routes, c, adding_position: list[int | float]):
-            if adding_position[0]==-1:
-                current_routes = current_routes+[[c]]
+            if adding_position[0] == -1:
+                current_routes = current_routes + [[c]]
             else:
                 # print("route add")
                 # print(current_routes)
@@ -441,7 +470,6 @@ def sisr_cvrp(
         
         # 1. Sort the absent nodes with some methods, here only use random as a placeholder
         absents = [absents[i] for i in np.random.choice(len(absents), len(absents), replace=False)]
-        
         if last_length is not None: rests = []
         for c in absents:   # for c \in A
             probable_place = [] # P <- NULL
@@ -450,8 +478,9 @@ def sisr_cvrp(
                 # r = [1, 2, 10, 5]
                 # assert capacity --> checking constraint
                 # reads: node x and column 2
-                if np.sum([data[x][2] for x in r]) + data[c][2] > vehicle_capcity: 
+                if (np.sum([data[x][2] for x in r]) + data[c][2]) > vehicle_capcity: 
                     # adding the node for the route candidate will increase the vehicle capacity's limit, hence skip
+                    # finding valid routes by finding all feasible combination of r inserted with c
                     continue
                 # MUNGKIN BISA TAMBAH LAGI PENGECEKAN CONSTRAINT hard time window / soft time window dari sini
                 complete_r = [0] + r + [0]
@@ -477,7 +506,7 @@ def sisr_cvrp(
         if last_length is not None: return current_routes, rests
         return current_routes
     
-    def _fleet_min(n, data, distance_matrix, neighbours, routes, verbose_step):
+    def fleet_min(n, data, distance_matrix, neighbours, routes, verbose_step):
         absents = []
         absent_c = np.zeros(distance_matrix.shape[0])
         best_routes = copy.deepcopy(routes)
@@ -567,7 +596,8 @@ def sisr_cvrp(
         current_distance = get_routes_distance(distance_matrix, current_routes)
         # Equation (4) for Acceptance Criterion
         if len(current_routes) < len(best_routes) or \
-            ( current_distance < (last_distance - temperature*np.log(np.random.random())) and len(current_routes) <= len(best_routes) ):
+            ( current_distance < (last_distance - temperature*np.log(np.random.random())) and \
+            len(current_routes) <= len(best_routes) ):
             # Check whether num. of current routes < num of best routes OR current distance < best distance
             # Basically update the best routes & distance IFF the total distance is shorter OR the number of routes is lesser
             if len(current_routes) < len(best_routes) or current_distance < best_distance:
@@ -607,8 +637,6 @@ def sisr_cvrp(
                 plot_routes(data, ruined_routes, title="Iteration: {} (Ruin)".format(i_iter+1), iteration=i_iter+1, ruin=True)
                 plot_routes(data, best_routes, title="Iteration: {} (Recreate)".format(i_iter+1), iteration=i_iter+1)
     
-    if verbose_step is not None and n_iter%verbose_step!=0: print(i_iter+1, "100.0 %:", best_distance)
-    
     import imageio
     def create_animation_from_frames(output_folder='frames', animation_path='routes_animation.gif', fps=2):
         frames = []
@@ -616,9 +644,12 @@ def sisr_cvrp(
         for filename in filenames:
             frames.append(imageio.imread(os.path.join(output_folder, filename)))
         imageio.mimsave(animation_path, frames, fps=fps)
+        
     # Create animation
     create_animation_from_frames()
     
+    if verbose_step is not None and n_iter % verbose_step != 0: 
+        print(i_iter+1, "100.0 %:", best_distance)
     return best_distance, best_routes
 
 def plot_routes(data, routes, title=None, output_folder="frames", iteration=0, ruin=False):
@@ -654,6 +685,8 @@ def plot_routes(data, routes, title=None, output_folder="frames", iteration=0, r
     legend = plt.legend(loc="upper right", edgecolor="black")
     legend.get_frame().set_alpha(None)
     legend.get_frame().set_facecolor((0, 0, 1, 0.1))
+    ax.legend(bbox_to_anchor=(1.1, 1.0))
+    plt.tight_layout()
     
     # Save frame
     if not os.path.exists(output_folder):

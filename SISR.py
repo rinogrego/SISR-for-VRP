@@ -3,6 +3,13 @@ import copy
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--n_iter", type=int, default=1000, help="Specify the number of iterations for the main algorithm")
+parser.add_argument("--max_hour_per_vehicle", type=int, default=12, help="Specify the number of hours all vehicles are allowed to travel")
+
+args = parser.parse_args()
 
 class SISR(object):
     def __init__(
@@ -68,12 +75,6 @@ class SISR(object):
         for route in routes:
             r = [0] + route + [0]
             total_distance += np.sum([distance_matrix[r[i], r[i+1]] for i in range(len(r)-1)])
-        if _print:
-            print()
-            print("Distance matrix shape:", distance_matrix.shape)
-            print(distance_matrix)
-            print(total_distance)
-            print()
         return total_distance
     
     def get_neighbours(self, distance_matrix: np.array) -> list[list[int]]:
@@ -140,13 +141,9 @@ class SISR(object):
             current_routes = current_routes + [[c]]
             # pass
         else:
-            # print("route add")
-            # print(current_routes)
-            # print("c:", c)
             chg_r = current_routes[adding_position[0]]                            # take a route to change
             new_r = chg_r[:adding_position[1]] + [c] + chg_r[adding_position[1]:] # insert the absent node
             current_routes[adding_position[0]] = new_r                            # update the route
-        # print("                     after route_add     :", len(current_routes))
         return current_routes
     
     def check_constraints(self, complete_r, index_route, distance_matrix, _print = False):
@@ -550,7 +547,7 @@ class SISR(object):
             best_routes = copy.deepcopy(self.init_route)
         else:
             print("No Initial Route")
-            print("Generate Several Best Routes")
+            print("Generate Initial Route")
             print("Initial routes: There are {} numbers of routes".format(len(range(1, len(self.data)))))
             # best_routes = [[i] for i in range(1, len(data))]
             best_routes = [[i] for i in range(1, len(data))]
@@ -710,11 +707,6 @@ if __name__ == "__main__":
                 i+=1
         return vehicle_capacity, np.array(data)
     
-    # vehicle_capacities, data = parse_vrp_question("data/sample_100.txt")
-    # print(data)
-    # vehicle_nums = 3
-    # vehicle_capacities = [vehicle_capacities for _ in range(vehicle_nums)]
-    
     vehicle_capacities, data = parse_hcvrp_question("data/hcvrp/hcvrp_v3_40_seed24610_tw.pkl")
     print("Vehicle Capacity :", vehicle_capacities)
     print("data.shape       :", data.shape)
@@ -726,7 +718,7 @@ if __name__ == "__main__":
     sisr = SISR(
         data,
         vehicle_capacities = vehicle_capacities,
-        n_iter = 1_000,
+        n_iter = args.n_iter,
         init_T = 100.0,
         final_T = 1.0,
         n_iter_fleet = 10,
@@ -736,7 +728,7 @@ if __name__ == "__main__":
         verbose_step = 100,
         time_window = True,
         soft_time_window = True,
-        max_hour_per_vehicle = 8
+        max_hour_per_vehicle = args.max_hour_per_vehicle
     )
     best_distance, best_cost, best_routes = sisr.run()
     time_cost = time.time() - start_time

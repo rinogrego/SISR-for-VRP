@@ -6,10 +6,9 @@ import pandas as pd
 import argparse
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--obj", type=str, choices=["min-max", "min-sum"], default="min-sum")
 parser.add_argument("--n_iter", type=int, default=1000, help="Specify the number of iterations for the main algorithm")
-parser.add_argument("--max_hour_per_vehicle", type=int, default=12, help="Specify the number of hours all vehicles are allowed to travel")
-
-args = parser.parse_args()
+parser.add_argument("--max_hour_per_vehicle", type=int, default=24, help="Specify the number of hours all vehicles are allowed to travel")
 
 class SISR(object):
     def __init__(
@@ -32,6 +31,8 @@ class SISR(object):
         soft_time_window: bool = False,
         multi_trip: bool = True,
         max_hour_per_vehicle: int = 12,
+        obj: str = "min-sum",
+        draw: bool = False
     ):
         self.data = data
         self.vehicle_capacities = vehicle_capacities
@@ -54,9 +55,15 @@ class SISR(object):
         self.init_route = init_route
         self.best_solution = None
         self.iteration_results = {}
+        self.obj = obj
+        self.draw = draw
         
         self.last_routes = None
         self.best_routes = None
+        
+        print("============ INITIATE SISR ============")
+        print(f"Objectives: {self.obj}")
+        print("=======================================")
 
     def calculate_distance_matrix(self, coords) -> np.array:
         distance_matrix = np.zeros([len(coords),len(coords)])
@@ -126,13 +133,15 @@ class SISR(object):
         return cost_current, t_current
     
     def get_routes_cost(self, distance_matrix, routes):
-        total_cost = 0
-        total_time = 0
-        for idx, route in enumerate(routes):
-            route_costs = self.get_route_cost(distance_matrix, route, idx)
-            total_cost += route_costs[0]
-            total_time += route_costs[1]
-        return total_cost, total_time
+        cost_each_route = [self.get_route_cost(distance_matrix, route, idx)[0] for idx, route in enumerate(routes)]
+        time_each_route = [self.get_route_cost(distance_matrix, route, idx)[1] for idx, route in enumerate(routes)]
+        ## IMPELEMENTASI min-max dan min-sum DI SINI!!!!!
+        if self.obj == "min-sum":
+            return np.sum(cost_each_route), np.sum(time_each_route)
+        elif self.obj == "min-max":
+            ## PERTIMBANGAN: APAKAH TIME JUGA NGAMBIL NILAI MAXIMUM???
+            return np.max(cost_each_route), np.max(time_each_route)
+            
 
     def route_add(self, current_routes, c, adding_position: list[int | float]) -> list[list[int]]:
         # print("                     before route_add    :", len(current_routes))
@@ -283,8 +292,11 @@ class SISR(object):
         """Algorithm 3 from SISR paper
         Managing route feasibility is done in this step for: Capacity, Time Window
         data have columns:
-        # XCOORD.    YCOORD.    DEMAND   READY TIME  DUE DATE   SERVICE TIME
+        ----
+        #### XCOORD.    YCOORD.    DEMAND   READY TIME  DUE DATE   SERVICE TIME
+        
         XCOORD.	YCOORD.	PICKUP	DEMAND	READY TIME	DUE DATE	EARLY_PENALTY	LATE_PENALTY	SERVICE TIME
+        
         XCOORD          :           0
         YCOORD          :           1
         PICKUP          :           2
@@ -652,16 +664,17 @@ class SISR(object):
                     self.plot_routes(self.data, ruined_routes, title="Iteration: {} (Ruin)".format(i_iter+1), iteration=i_iter+1, ruin=True)
                     self.plot_routes(self.data, best_routes, title="Iteration: {} (Recreate)".format(i_iter+1), iteration=i_iter+1)
         
-        import imageio
-        def create_animation_from_frames(output_folder='frames', animation_path='routes_animation.gif', fps=2):
-            frames = []
-            filenames = sorted([f for f in os.listdir(output_folder) if f.endswith('.png')])
-            for filename in filenames:
-                frames.append(imageio.v2.imread(os.path.join(output_folder, filename)))
-            imageio.mimsave(animation_path, frames, fps=fps)
-            
-        # Create animation
-        create_animation_from_frames()
+        if self.draw:
+            import imageio
+            def create_animation_from_frames(output_folder='frames', animation_path='routes_animation.gif', fps=2):
+                frames = []
+                filenames = sorted([f for f in os.listdir(output_folder) if f.endswith('.png')])
+                for filename in filenames:
+                    frames.append(imageio.v2.imread(os.path.join(output_folder, filename)))
+                imageio.mimsave(animation_path, frames, fps=fps)
+                
+            # Create animation
+            create_animation_from_frames()
         
         if self.verbose_step is not None and self.n_iter % self.verbose_step != 0: 
             print(i_iter+1, "100.0 %:", best_distance)
@@ -682,7 +695,6 @@ if __name__ == "__main__":
         customer_coordinates = loaded_data[instance_num][1]
         customer_demands = loaded_data[instance_num][2]
         vehicle_capacities = loaded_data[0][3]
-        # vehicle_capacities = [80, 100, 60]
         time_open = np.asarray([[1 for _ in range(24)]] + loaded_data[0][4], dtype=np.int8)
         data = {
             "X_coord": [depot_coordinates[0]] + [coord[0] for coord in customer_coordinates],
@@ -712,6 +724,8 @@ if __name__ == "__main__":
     print("data.shape       :", data.shape)
     # print(data.iloc[:, :])
     print("------------------")
+    
+    args = parser.parse_args()
 
     start_time = time.time()
     np.random.seed(0)
@@ -728,7 +742,8 @@ if __name__ == "__main__":
         verbose_step = 100,
         time_window = True,
         soft_time_window = True,
-        max_hour_per_vehicle = args.max_hour_per_vehicle
+        max_hour_per_vehicle = args.max_hour_per_vehicle,
+        obj = args.obj
     )
     best_distance, best_cost, best_routes = sisr.run()
     time_cost = time.time() - start_time

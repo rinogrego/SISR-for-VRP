@@ -28,6 +28,14 @@ python SISR.py --obj "min-sum" --n_iter 1000 --max_hour_per_vehicle 12
 python SISR.py --obj "min-max" --n_iter 1000 --max_hour_per_vehicle 12
 ```
 
+## Parameter Explanation
+
+| Parameters | Description |
+| -- | -- |
+| obj | define objective function for the method to optimize |
+| n_iter | number of iterations |
+| max_hour_per_vehicle | define the maximum hour for each vehicle to be able to work |
+
 ## Note
 
 - parameter `fleet_gap` masih belum dimengerti

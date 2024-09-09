@@ -62,6 +62,10 @@ Reimplementation of Slack Induced by String Removals (SISR) algorithm for Vehicl
 | n_iter | number of iterations |
 | max_hour_per_vehicle | define the maximum hour for each vehicle to be able to work |
 
+**Why is there a max hour per vehicle parameter?**
+
+To control the algorithm. Initially, SISR was developed to optimize the reduction of vehicle usage even if it will costs more. Hence to counteract that, maximum hour of working for each vehicle is implemented to prevent the reduction of vehicle utilization.
+
 ## Note
 
 - parameter `fleet_gap` masih belum dimengerti

@@ -81,3 +81,8 @@ To control the algorithm. Initially, SISR was developed to optimize the reductio
 - metode SISR memiliki objective mereduce penggunaan vehicle meski cost-nya nambah
 - adaptasi-nya dengan implement max_hour_vehicle
 - drawing route dengan multi-trip masih jelek
+
+## To-do
+
+- implement route visualization that consider multi-trip (optional)
+- implement vehicle reduction prevention in Ruin method

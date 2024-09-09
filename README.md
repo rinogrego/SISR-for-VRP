@@ -8,24 +8,50 @@ Reimplementation of Slack Induced by String Removals (SISR) algorithm for Vehicl
 
 ## How to Run
 
+1. First clone this repo by running the following command from your terminal
+
+```
+    git clone https://github.com/rinogrego/SISR-for-VRP
+```
+
+2. Go to the folder that contains the cloned repository
+
 ```text
-python -m venv venv
+    cd SISR-for-VRP
+```
+
+3. Initiate a virtual environment
+
+```text
+    python -m venv venv
+```
+
+4. Activate the virtual environment
+
+```text
+    venv\\scripts\\activate
+```
+
+5. Install the necessary libraries
+
+```text
+    pip install -r requirements.txt
+```
+
+6. You can run the following program using the following command
+
+```python
+    python SISR.py
+```
+
+7. You can implement various parameters: method objective, number of iterations, and maximum hour of working per vehicle, as follow
+
+```text
+    python SISR.py --obj "min-sum" --n_iter 1000 --max_hour_per_vehicle 12
 ```
 
 ```text
-venv\\scripts\\activate
-```
-
-```text
-pip install -r requirements.txt
-```
-
-```text
-python SISR.py --obj "min-sum" --n_iter 1000 --max_hour_per_vehicle 12
-```
-
-```text
-python SISR.py --obj "min-max" --n_iter 1000 --max_hour_per_vehicle 12
+    python SISR.py --obj "min-max" --n_iter 1000 --max_hour_per_vehicle 12
 ```
 
 ## Parameter Explanation

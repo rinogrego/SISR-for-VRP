@@ -2,3 +2,4 @@ frames
 images
 *.gif
 venv
+*.xlsx

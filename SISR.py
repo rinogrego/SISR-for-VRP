@@ -790,5 +790,7 @@ if __name__ == "__main__":
     save = True
     if save:
         df_report.to_excel(f"report.xlsx", index=False)
+        
+    print(df_report)
     
 

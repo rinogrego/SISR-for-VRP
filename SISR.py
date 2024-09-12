@@ -132,13 +132,16 @@ class SISR(object):
                 cost_current *= 0.1
         return cost_current, t_current
     
-    def get_routes_cost(self, distance_matrix, routes):
+    def get_routes_cost(self, distance_matrix, routes, obj=None):
+        if obj is None:
+            obj = self.obj
+        
         cost_each_route = [self.get_route_cost(distance_matrix, route, idx)[0] for idx, route in enumerate(routes)]
         time_each_route = [self.get_route_cost(distance_matrix, route, idx)[1] for idx, route in enumerate(routes)]
         ## IMPELEMENTASI min-max dan min-sum DI SINI!!!!!
-        if self.obj == "min-sum":
+        if obj == "min-sum":
             return np.sum(cost_each_route), np.sum(time_each_route)
-        elif self.obj == "min-max":
+        elif obj == "min-max":
             ## PERTIMBANGAN: APAKAH TIME JUGA NGAMBIL NILAI MAXIMUM???
             return np.max(cost_each_route), np.max(time_each_route)
             
@@ -678,7 +681,17 @@ class SISR(object):
         
         if self.verbose_step is not None and self.n_iter % self.verbose_step != 0: 
             print(i_iter+1, "100.0 %:", best_distance)
-        return best_distance, best_cost, best_routes
+            
+        # assert best_distance == self.get_routes_cost(distance_matrix, best_routes)[1]
+        # assert best_cost == self.get_routes_cost(distance_matrix, best_routes)[0]
+        best_cost_min_sum = self.get_routes_cost(distance_matrix, best_routes, obj="min-sum")[0]
+        best_cost_min_max = self.get_routes_cost(distance_matrix, best_routes, obj="min-max")[0]
+        best_distance_min_sum = self.get_routes_cost(distance_matrix, best_routes, obj="min-sum")[1]
+        best_distance_min_max = self.get_routes_cost(distance_matrix, best_routes, obj="min-max")[1]
+        # print(self.obj)
+        # print("min_sum:", best_cost_min_sum == best_cost)
+        # print("min_max:", best_cost_min_max == best_cost)
+        return best_routes, best_cost_min_sum, best_cost_min_max, best_distance_min_sum, best_distance_min_max
 
 
 if __name__ == "__main__":
@@ -730,8 +743,10 @@ if __name__ == "__main__":
     data_list = []
     obj_list = []
     time_cost_list = []
-    best_cost_list = []
-    best_distance_list = []
+    best_cost_min_sum_list = []
+    best_cost_min_max_list = []
+    best_distance_min_sum_list = []
+    best_distance_min_max_list = []
     best_routes_list = []
     
     pd.DataFrame
@@ -763,28 +778,32 @@ if __name__ == "__main__":
                 # obj = args.obj
                 obj = obj
             )
-            best_distance, best_cost, best_routes = sisr.run()
+            best_routes, best_cost_min_sum, best_cost_min_max, best_distance_min_sum, best_distance_min_max = sisr.run()
             time_cost = time.time() - start_time
-            print("dataset          :", dataset.split("/")[-1])
-            print("objective        :", obj)
-            print("running_time     :", time_cost)
-            print("best_cost        :", best_cost)
-            print("time_distance    :", best_distance)
-            print("best_routes      :", best_routes)
+            print("dataset                  :", dataset.split("/")[-1])
+            print("objective                :", obj)
+            print("running_time             :", time_cost)
+            print("best_cost_min_max        :", best_cost_min_max)
+            print("best_cost_min_sum        :", best_cost_min_sum)
+            print("time_distance_min_max    :", best_distance_min_max)
+            print("time_distance_min_sum    :", best_distance_min_sum)
+            print("best_routes              :", best_routes)
             
             data_list.append(dataset.split("/")[-1])
             obj_list.append(obj)
             time_cost_list.append(time_cost)
-            best_cost_list.append(best_cost)
-            best_distance_list.append(best_distance)
+            best_cost_min_sum_list.append(best_cost_min_sum)
+            best_cost_min_max_list.append(best_cost_min_max)
+            best_distance_min_sum_list.append(best_distance_min_sum)
+            best_distance_min_max_list.append(best_distance_min_max)
             best_routes_list.append(str(best_routes))
     
     df_report = pd.DataFrame(
         list(zip(
-            data_list, obj_list, time_cost_list, best_cost_list, best_distance_list, best_routes_list
+            data_list, obj_list, time_cost_list, best_cost_min_max_list, best_cost_min_sum_list, best_distance_min_max_list, best_distance_min_sum_list, best_routes_list
         )),
         columns=[
-        'data', 'objective', 'time_cost', 'best_cost', 'best_distance', 'best_routes'
+        'data', 'objective', 'time_cost', 'best_cost_min_max', 'best_cost_min_sum', 'best_distance_min_max', 'best_distance_min_sum', 'best_routes'
     ])
     
     save = True

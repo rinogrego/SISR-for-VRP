@@ -719,37 +719,76 @@ if __name__ == "__main__":
                 i+=1
         return vehicle_capacity, np.array(data)
     
-    vehicle_capacities, data = parse_hcvrp_question("data/hcvrp/hcvrp_v3_40_seed24610_tw.pkl")
-    print("Vehicle Capacity :", vehicle_capacities)
-    print("data.shape       :", data.shape)
-    # print(data.iloc[:, :])
-    print("------------------")
     
-    args = parser.parse_args()
-
-    start_time = time.time()
-    np.random.seed(0)
-    sisr = SISR(
-        data,
-        vehicle_capacities = vehicle_capacities,
-        n_iter = args.n_iter,
-        init_T = 100.0,
-        final_T = 1.0,
-        n_iter_fleet = 10,
-        fleet_gap = 2,
-        obj_n_routes = 3,
-        init_route = None,
-        verbose_step = 100,
-        time_window = True,
-        soft_time_window = True,
-        max_hour_per_vehicle = args.max_hour_per_vehicle,
-        obj = args.obj
-    )
-    best_distance, best_cost, best_routes = sisr.run()
-    time_cost = time.time() - start_time
-    print("running_time     :", time_cost)
-    print("best_cost        :", best_cost)
-    print("time_distance    :", best_distance)
-    print("best_routes      :", best_routes)
+    datasets_path = [
+        "data/Evaluation Data/20 Nodes/hcvrp_v3_20_set1_seed29493_tw.pkl",
+        "data/Evaluation Data/30 Nodes/hcvrp_v3_30_set1_seed17502_tw.pkl",
+        "data/hcvrp/hcvrp_v3_40_seed24610_tw.pkl"
+    ]
+    objectives = ["min-max", "min-sum"]
+    
+    data_list = []
+    obj_list = []
+    time_cost_list = []
+    best_cost_list = []
+    best_distance_list = []
+    best_routes_list = []
+    
+    pd.DataFrame
+    for obj in objectives:
+        for dataset in datasets_path:
+            vehicle_capacities, data = parse_hcvrp_question(dataset)
+            print("Vehicle Capacity :", vehicle_capacities)
+            print("data.shape       :", data.shape)
+            # print(data.iloc[:, :])
+            print("------------------")
+            
+            args = parser.parse_args()
+            start_time = time.time()
+            np.random.seed(0)
+            sisr = SISR(
+                data,
+                vehicle_capacities = vehicle_capacities,
+                n_iter = args.n_iter,
+                init_T = 100.0,
+                final_T = 1.0,
+                n_iter_fleet = 10,
+                fleet_gap = 2,
+                obj_n_routes = 3,
+                init_route = None,
+                verbose_step = 100,
+                time_window = True,
+                soft_time_window = True,
+                max_hour_per_vehicle = args.max_hour_per_vehicle,
+                # obj = args.obj
+                obj = obj
+            )
+            best_distance, best_cost, best_routes = sisr.run()
+            time_cost = time.time() - start_time
+            print("dataset          :", dataset.split("/")[-1])
+            print("objective        :", obj)
+            print("running_time     :", time_cost)
+            print("best_cost        :", best_cost)
+            print("time_distance    :", best_distance)
+            print("best_routes      :", best_routes)
+            
+            data_list.append(dataset.split("/")[-1])
+            obj_list.append(obj)
+            time_cost_list.append(time_cost)
+            best_cost_list.append(best_cost)
+            best_distance_list.append(best_distance)
+            best_routes_list.append(str(best_routes))
+    
+    df_report = pd.DataFrame(
+        list(zip(
+            data_list, obj_list, time_cost_list, best_cost_list, best_distance_list, best_routes_list
+        )),
+        columns=[
+        'data', 'objective', 'time_cost', 'best_cost', 'best_distance', 'best_routes'
+    ])
+    
+    save = True
+    if save:
+        df_report.to_excel(f"report.xlsx", index=False)
     
 
